@@ -1,0 +1,26 @@
+[build-system]
+requires = ["setuptools"]
+build-backend = "setuptools.build_meta"
+
+[tool.setuptools]
+include-package-data = true
+
+[project]
+name = "PyAXBPS"
+version = "1.0.2"
+authors = [
+  { name="Casey Densmore", email="cdensmore101@gmail.com" },
+]
+description = "A python package to process AXBT, AXCTD, and AXCP profiles via command line or python scripts"
+readme = "README.md"
+license = { file="License_GNU_GPL_v3.txt" }
+requires-python = ">=3.7"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "License :: OSI Approved :: GNU General Public License v3 or later (GPLv3+)",
+    "Operating System :: OS Independent",
+]
+
+[project.urls]
+"Homepage" = "https://github.com/cdens/PyAXBPS"
+"Bug Tracker" = "https://github.com/cdens/PyAXBPS/issues"

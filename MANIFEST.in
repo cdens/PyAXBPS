@@ -1,0 +1,2 @@
+include PyAXBPS/AXCTDProcessor/temp_LUT.txt
+include PyAXBPS/AXCPProcessor/WMM.COF
