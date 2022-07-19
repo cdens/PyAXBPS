@@ -33,7 +33,7 @@ import sys
 import os
 
 import numpy as np
-from AXBPS_cli import AXCTDprocessor
+from PyAXBPS import AXCTDprocessor
 
     
     

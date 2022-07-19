@@ -20,7 +20,7 @@
 
 import os, shutil
 import numpy as np
-from AXBPS_cli import AXBTprocessor as ap
+from PyAXBPS import AXBTprocessor as ap
 from datetime import datetime
 import argparse
 
