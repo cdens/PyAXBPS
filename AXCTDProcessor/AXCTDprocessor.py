@@ -29,6 +29,12 @@ from traceback import print_exc as trace_error
 from . import demodulate, parse
 
 
+#add package directory to path for other file imports
+import os, inspect
+global cdir_axctd
+cdir_axctd = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
+
+
 #this could be problematic for debugging but I'm getting tired of the "chunk could not be understood" messages
 import warnings
 warnings.filterwarnings("ignore")
@@ -127,7 +133,7 @@ class AXCTD_Processor:
         self.metadata = parse.initialize_axctd_metadata()
         self.metadata['counter_found_2'] = [False] * 72
         self.metadata['counter_found_3'] = [False] * 72
-        self.tempLUT = parse.read_temp_LUT('temp_LUT.txt')
+        self.tempLUT = parse.read_temp_LUT(os.path.join(cdir_axctd,'temp_LUT.txt'))
         
         #store powers at different frequencies used to ID profile start
         self.p400 = np.array([])

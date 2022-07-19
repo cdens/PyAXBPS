@@ -21,35 +21,6 @@ import numpy as np
 from datetime import date, datetime, timedelta
 import chardet
 
-
-
-#read raw temperature/depth profile from LOGXX.DTA file
-def readlogfile(logfile):
-
-    with open(logfile,'r') as f_in:
-        depth = []
-        temperature = []
-
-        for line in f_in:
-
-            line = line.strip().split() #get rid of \n character, split by spaces
-
-            try:
-                curfreq = np.double(line[2])
-                cdepth = np.double(line[1])
-                ctemp = np.double(line[3])
-            except:
-                curfreq = np.NaN
-
-            if ~np.isnan(curfreq) and curfreq != 0: #if it is a valid frequency, save the datapoint
-                depth.append(cdepth)
-                temperature.append(ctemp)
-    
-    #convert to numpy arrays
-    depth = np.asarray(depth)
-    temperature = np.asarray(temperature)
-    
-    return [temperature,depth]
     
     
     
@@ -77,261 +48,9 @@ def writelogfile(logfile, dropdatetime, depth, tempC, frequency, time, probetype
                 
             f_out.write(cline + "\n")
         
-        
-        
-    
             
-    
-    
-#code to parse a variety of date formats to python datetime variable
-def parse_date(line):
-    day = month = year = False #initializing
-    
-    if "/" in line and len(line) <= 8: #mm/dd/yy format
-        line = line.split('/')
-        month = int(line[0])
-        day = int(line[1])
-        year = int(line[2]) + 2000
-    elif "/" in line and len(line) <= 10: #mm/dd/yyyy, or yyyy/mm/dd (assuming not dd/mm/yyyy)
-        line = line.split('/')
-        if len(line[0]) == 4:
-            year = int(line[0])
-            month = int(line[1])
-            day = int(line[2])
-        elif len(line[2]) == 4:
-            month = int(line[0])
-            day = int(line[1])
-            year = int(line[2])
-            
-    elif "-" in line and len(line) <= 8: #mm-dd-yy format
-        line = line.split('-')
-        month = int(line[0])
-        day = int(line[1])
-        year = int(line[2]) + 2000
-    elif "-" in line and len(line) <= 10: #mm-dd-yyyy, or yyyy-mm-dd (assuming not dd-mm-yyyy)
-        line = line.split('-')
-        if len(line[0]) == 4:
-            year = int(line[0])
-            month = int(line[1])
-            day = int(line[2])
-        elif len(line[2]) == 4:
-            year = int(line[2])
-            month = int(line[1])
-            day = int(line[0])
-    
-    else: #trying YYYYMMDD format instead
-        year = int(line[:4])
-        month = int(line[4:6])
-        day = int(line[6:8])
-        
-    return year,month,day
-    
-    
-    
-    
-#parsing a variety of lats/lons into valid floats with N and E positive
-def parse_lat_lon(line):
-    line = line.strip().lower() #sanitizing
-    
-    #identifying hemisphere
-    hemsign = 1 #assuming N/E hemisphere unless proven otherwise
-    if 'n' in line or 's' in line or 'e' in line or 'w' in line: #hemisphere given
-        if 's' in line or 'w' in line:
-            hemsign = -1
-        line = line[:-1] #drop hemisphere from line
-            
-    else: #lat/lon is positive or negative for E/N or W/S hemisphere respectively
-        if line[0] == '-':
-            hemsign = -1
-            line = line[1:]
-    
-    #sanitize and split line
-    line_split = line.replace(' ',':')
-    line_split = line_split.split(':')
-        
-    #calculating lon/lat in decimal degrees
-    value = 0
-    for i,valstr in enumerate(line_split):
-        value += hemsign*float(valstr)/60**i
-    
-    return value
-    
-    
-    
-    
-    
-    
-    
-def readdatfile(datfile):
-    
-    data = {'temperature':[], 'salinity':[], 'depth':[]} #initializing data lists
-    
-    with open(datfile) as f_in:
-        
-        for i,cline in enumerate(f_in): 
-            cline = [i for i in cline.strip().split(' ') if len(i) > 0] #space delimited
-            
-            if i < 3: #first 3 lines are trash
-                pass
-            elif i == 3: #header
-                dtgstr = cline[0]+cline[1]
-                if len(dtgstr) == 12:
-                    dtgformat = '%Y%m%d%H%M%S'
-                else:
-                    dtgformat = '%Y%m%d%H%M' #correct to best guess of format
-                    dtgstr = dtgstr[:10]
-                    
-                dropdatetime = datetime.strptime(dtgstr,dtgformat)
-                lat = float(cline[2])
-                lon = float(cline[3])
-            
-            else:
-                if len(cline) > 1:
-                    data['depth'].append(float(cline[0]))
-                    data['temperature'].append(float(cline[1]))
-                    
-                    try: #try/except so dat format is compatible with z/T columns only
-                        cpsal = float(cline[2])
-                    except IndexError:
-                        cpsal = np.NaN
-                        
-                    if cpsal >= 0:
-                        data['salinity'].append(cpsal)
-                    else:
-                        data['salinity'].append(np.NaN)
-        
-    
-    for cfield in ['depth','temperature','salinity']:  
-        data[cfield] = np.asarray(data[cfield])   
-        
-    return dropdatetime,lat,lon,data
-    
-    
-    
-    
-#TODO: understand format of 1st 4 lines -> what is second time, what is 12, what are first two lines for?
-# ****0000005762****
-# SOFX01 KWBC 172308
 
-# 20210817 225634  17.230  -79.962 N43RF AL072021 12 2021-229-23:08:29
-    
-def writedatfile(datfile,dropdatetime,lat,lon,headerstart,tailnum,missionnum,depth,temperature,salinity=None):
-    
-    with open(datfile,'w') as f_out:
-        
-        header = headerstart + f"\n{dropdatetime:%Y%m%d} {dropdatetime:%H%M%S} {lat:7.3f} {lon:8.3f} {tailnum} {missionnum} 12 {datetime.utcnow():%Y-%j-%H:%M:%S}\n"
-        
-        f_out.write(header)
-        
-        if salinity is None:
-            salinity = [np.NaN]*len(depth)
-        if len(salinity) != len(depth): #now salinity is definitely a list, can call len on it
-            salinity = [np.NaN]*len(depth)
-            
-        salinity = [-9.99 if np.isnan(i) else i for i in salinity] #replace any NaNs with negative value
-        
-        for (cd,cT,cS) in zip(depth,temperature,salinity):
-            if not np.isnan(cd):
-                f_out.write(f'\n{cd:6.1f}{cT:6.2f}{cS:6.2f}\n')
-    
-        f_out.write('\n\n') #ends with two more empty lines
-    
-    
-    
-    
-    
 
-    
-def readedffile(edffile):
-    
-    encoding = 'utf-8'
-    
-    lon = lat = day = month = year = hour = minute = second = False #variables will be returned as 0 if unsuccessfully parsed
-    
-    data = {'depth':[],'temperature':[],'salinity':[]} #initializing each data field as [] so if it isn't empty upon function completion the user knows the file had a match for that field
-    
-    fields = ['depth','temperature','salinity']
-    fieldcolumns = [0,1,-1]
-    
-    with open(edffile,'rb') as f_in:
-        
-        for cline in f_in:
-            try:
-                cline = cline.decode(encoding).strip()
-            except:
-                fileinfo = chardet.detect(cline)
-                encoding = fileinfo['encoding']
-                cline = cline.decode(encoding).strip()
-                
-            try:
-                if ":" in cline: #input parameter- parse appropriately
-                    line = cline.strip().split(':')
-                    
-                    if "time" in line[0].lower(): #assumes time is in "HH", "HH:MM", or "HH:MM:SS" format
-                        hour = int(line[1].strip())
-                        minute = int(line[2].strip())
-                        second = int(line[3].strip())
-                        
-                    elif "date" in line[0].lower(): #TODO: fix date and time reading
-                        line = line[1].strip() #should be eight digits long
-                        year,month,day = parse_date(line)
-                            
-                    
-                    elif "latitude" in line[0].lower(): 
-                        startind = cline.find(':')
-                        lat = parse_lat_lon(cline[startind+1:])
-                            
-                    elif "longitude" in line[0].lower():
-                        startind = cline.find(':')
-                        lon = parse_lat_lon(cline[startind+1:])
-                        
-                    elif "field" in line[0].lower(): #specifying which column contains temperature, depth, salinity (optional)
-                        matched = False
-                        curlinefield = line[1].lower()
-                        curfieldcolumn = int(line[0].strip()[-1]) - 1
-                        for i,field in enumerate(fields):
-                            if field in curlinefield:
-                                fieldcolumns[i] = curfieldcolumn
-                                matched = True
-                        if not matched:
-                            fields.append(curlinefield)
-                            fieldcolumns.append(curfieldcolumn)
-                            data[curlinefield] = []
-                        
-                                
-                #space or tab delimited data (if number of datapoints matches fields and line doesnt start with //)
-                elif cline[:2] != '//': 
-                    curdata = cline.strip().split()
-                    #if salinity is included, #of columns should match number of fields, if not, # columns should be # fields minus 1 (no salinity data)
-                    if (fieldcolumns[2] >= 0 and len(curdata) == len(fields)) or (fieldcolumns[2] == -1 and len(curdata) == len(fields)-1):
-                        for i,cfield in enumerate(fields):
-                            data[cfield].append(curdata[fieldcolumns[i]])
-                    
-            except (ValueError, IndexError, AttributeError):
-                pass
-    
-    #determining datetime
-    try:
-        dropdatetime = datetime(year,month,day,hour,minute,second)
-    except:
-        dropdatetime = False #return false for datetime if inputs are invalid
-        
-    #checking if each field can be converted from string to float and doing so as possible
-    for field in data.keys():
-        try:
-            curdata_float = [float(val) for val in data[field]] #if this doesn't raise an error, the float conversion worked
-            data[field] = curdata_float
-        except (ValueError, TypeError): #raised if data can't be converted to float
-            pass
-    
-    for cfield in ['depth','temperature','salinity']:  
-        data[cfield] = np.asarray(data[cfield])   
-        
-    return data,dropdatetime,lat,lon
-
-    
-    
-    
 
 def writeedffile(edffile,dropdatetime,lat,lon,data,comments,QC=False):
     
@@ -403,225 +122,21 @@ def writeedffile(edffile,dropdatetime,lat,lon,data,comments,QC=False):
             f_out.write(cline + "\n")
 
     
-    
-    
-#read data from JJVV file (AXBT and/or temperature data only)
-def readjjvvfile(jjvvfile):
-    with open(jjvvfile,'r') as f_in:
-
-        depth = []
-        temperature = []
-
-        line = f_in.readline()
-        line = line.strip().split()
-        
-        #date and time info
-        datestr = line[1]
-        day = int(datestr[:2])
-        month = int(datestr[2:4])
-        yeardigit = int(datestr[4])
-        # time = int(line[2][:4])
-        hour = int(line[2][:2])
-        minute = int(line[2][2:4])
-        
-        #determining year (drop must have been within last 10 years)
-        curyear = datetime.utcnow().year
-        decade = int(np.floor(curyear/10)*10)
-        if yeardigit + decade > curyear:
-            decade -= 1
-        year = decade + yeardigit
-        
-        try:
-            dropdatetime = datetime(year,month,day,hour,minute,0)
-        except:
-            dropdatetime = False #return false for datetime if inputs are invalid
-
-        #latitude and longitude
-        latstr = line[3]
-        lonstr = line[4]
-        quad = int(latstr[0])
-        lat = np.double(latstr[1:3]) + np.double(latstr[3:])/10**(len(latstr)-3)
-        lon = np.double(lonstr[:3]) + np.double(lonstr[3:])/10**(len(lonstr)-3)
-        if quad == 3:#hemisphere (if quad == 1, no need to change anything)
-            lat = -1*lat
-        elif quad == 5:
-            lon = -1*lon
-            lat = -1*lat
-        elif quad == 7:
-            lon = -1*lon
-            
-        lastdepth = -1
-        hundreds = 0
-        l = 0
-
-        identifier = 'UNKNOWN'
-
-        for line in f_in:
-            l = l + 1
-
-            #removing non-data entry from first column, 2nd line of JJVV
-            line = line.strip().split()
-            if l == 1: line = line[1:]
-
-            for curentry in line:
-
-                try:
-                    int(curentry) #won't execute if curentry has non-numbers in it (e.g. the current entry is the identifier)
-
-                    if int(curentry[:3]) == 999 and int(curentry[3:])*100 == hundreds + 100:
-                        hundreds = hundreds + 100
-                    else:
-                        if int(curentry[:2]) + hundreds != lastdepth:
-                            cdepth = int(curentry[:2]) + hundreds
-                            lastdepth = cdepth
-                            depth.append(cdepth)
-                            temperature.append(np.double(curentry[2:])/10)
-
-                except: identifier = curentry
-    
-    #converting to numpy arrays
-    depth = np.asarray(depth)
-    temperature = np.asarray(temperature)
-    
-    #correcting negative temperatures (encoded as abs(T) + 50)
-    ind = temperature >= 50
-    temperature[ind] = -1*(temperature[ind]-50)
-    
-    return [temperature,depth,dropdatetime,lat,lon,identifier]
-
-
-
-
-#write data to JJVV file (AXBT/temperature only)
-def writejjvvfile(jjvvfile,temperature,depth,cdtg,lat,lon,identifier,isbtmstrike):
-    
-    #open file for writing
-    with open(jjvvfile,'w') as f_out:
-    
-        #first line- header information
-        if lon >= 0 and lat >= 0:
-            quad = '1'
-        elif lon >= 0 and lat < 0:
-            quad = '3'
-        elif lon < 0 and lat >= 0:
-            quad = '7'
-        else:
-            quad = '5'
-            
-        #getting ones digit from year
-        yeardigit = cdtg.year - int(np.floor(cdtg.year/10)*10)
-
-        f_out.write(f"JJVV {datetime.strftime(cdtg,'%d%m')}{str(yeardigit)} {datetime.strftime(cdtg,'%H%M')}/ {quad}{int(abs(lat)*1000):05d} {int(abs(lon)*1000):06d} 88888\n")
-
-        #create a list with all of the entries for the file
-        filestrings = []
-        filestrings.append('51099')
-        hundreds = 0
-        i = 0
-        lastdepth = -1
-
-        # appending data to list, adding hundreds increment counters where necessary (while loop necessary in case a gap > 100m exists)
-        while i < len(depth):
-            cdepth = round(depth[i])
-            ctemp = temperature[i]
-            
-            if ctemp < 0: #correcting if value is negative
-                ctemp = np.abs(ctemp) + 50
-            
-            if cdepth - hundreds > 99:  # need to increment hundreds counter in file
-                hundreds = hundreds + 100
-                filestrings.append(f'999{int(hundreds/100):02d}')
-            else:
-                if cdepth - lastdepth >= 1 and cdepth - hundreds <= 99:  # depth must be increasing, not outside of current hundreds range
-                    lastdepth = cdepth
-                    filestrings.append(f"{int(round(cdepth-hundreds)):02d}{int(round(ctemp,1)*10):03d}")
-                    
-                i += 1
-
-        if isbtmstrike: #note if the profile struck the bottom
-            filestrings.append('00000')
-
-        identifier = identifier[:5] #concatenates if larger than 5 digits
-        filestrings.append(identifier) #tack identifier onto end of file entries
-
-        #writing all data to file
-        i = 0
-        while i < len(filestrings):
-            if i == 0 and len(filestrings) >= 6: #first line has six columns (only if there is enough data)
-                line = f"{filestrings[i]} {filestrings[i+1]} {filestrings[i+2]} {filestrings[i+3]} {filestrings[i+4]} {filestrings[i+5]}\n"
-                i += 6
-            elif i+5 < len(filestrings): #remaining full lines have five columns
-                line = f"{filestrings[i]} {filestrings[i+1]} {filestrings[i+2]} {filestrings[i+3]} {filestrings[i+4]}\n"
-                i += 5
-            else: #remaining data on last line
-                line = ''
-                while i < len(filestrings):
-                    line += filestrings[i]
-                    if i == len(filestrings) - 1:
-                        line += '\n'
-                    else:
-                        line += ' '
-                    i += 1
-            f_out.write(line)
-            
-
-
-
-#read data from FIN file
-def readfinfile(finfile, hasSal=False):
-    
-    with open(finfile,'r') as f_in:
-
-        line = f_in.readline()
-        line = line.strip().split()
-
-        #pulling relevant header information
-        year = int(line[0])
-        dayofyear = int(line[1])
-        curdate = date.fromordinal(date.toordinal(date(year-1,12,31)) + dayofyear)
-        dropdatetime = datetime.fromisoformat(curdate.isoformat())
-        dropdatetime += timedelta(hours=int(line[2][:2]),minutes=int(line[2][2:4]))
-        lat = np.double(line[3])
-        lon = np.double(line[4])
-        num = int(line[5])
-
-        #setting up lists
-        temperature = []
-        salinity = []
-        depth = []
-
-        #reading data
-        all_data = []
-        for line in f_in:
-            all_data.extend([np.double(item) for item in line.strip().split()])
-        
-            
-        #parsing into profiles
-        if hasSal:
-            for i in range(0,len(all_data),3):
-                temperature.append(all_data[i])
-                depth.append(all_data[i+1])
-                salinity.append(all_data[i+2])
-                
-        else:
-            for i in range(0,len(all_data),2):
-                temperature.append(all_data[i])
-                depth.append(all_data[i+1])
             
             
-    #converting data to arrays and returning
-    data = {"depth":np.asarray(depth), "temperature":np.asarray(temperature), "salinity":np.asarray(salinity)}
-    return [data,dropdatetime,lat,lon,num]
 
 
 
 
 #write data to FIN file
-def writefinfile(finfile,cdtg,lat,lon,num,depth,temperature,salinity=None):
+def writefinfile(finfile,cdtg,lat,lon,num,depth,temperature,salinity=None,U=None,V=None):
     
     hasSal = False
-    if salinity is not None:
+    hasCurrents = False
+    if salinity is not None: 
         hasSal = True
+    elif U is not None and V is not None:
+        hasCurrent = True
     
         
     with open(finfile,'w') as f_out:
@@ -653,6 +168,11 @@ def writefinfile(finfile,cdtg,lat,lon,num,depth,temperature,salinity=None):
             nobtypes = 3
             for (t,d,s) in zip(temperature,depth,salinity):
                 outdata.extend([f"{t: 8.3f}",f"{d: 8.1f}",f"{s: 8.3f}"])
+        elif hasCurrents:
+            obsperline = 3
+            nobtypes = 4
+            for (t,d,u,v) in zip(temperature,depth,U,V):
+                outdata.extend([f"{t: 8.3f}",f"{d: 8.1f}",f"{u: 8.3f}",f"{v: 8.3f}"])
         else:
             nobtypes = 2
             obsperline = 5
@@ -715,10 +235,12 @@ def writebufrfile(bufrfile, cdtg, lon, lat, identifier, originatingcenter, depth
         hasoptionalsectionnum = int('00000000', 2)
         
         
-    if salinity is not None: #TODO: add ability to write currents as well
+    hasSal = False
+    hasCurrents = False
+    if salinity is not None: 
         hasSal = True
-    else:
-        hasSal = False
+    elif U is not None and V is not None:
+        hasCurrent = True
         
         
     # Section 3 info
@@ -743,9 +265,14 @@ def writebufrfile(bufrfile, cdtg, lon, lat, identifier, originatingcenter, depth
     int('0000011100111110',2), #0/07/062: depth (17b, m*10)
     int('0001011000101011',2),] #0/22/043: temperature (15b, degK*100)    
     
-    if hasSal: #TODO: change replicator and append salinity 
+    if hasSal: #change replicator and append salinity 
         fxy_all[5] = int('0100001100000000',2) #change replicator (index 5) to delayed rep of 3 descriptors, code 1/03/000
         fxy_all.append(int('0001011000111110',2)) #0/22/062: salinity (14b, 100*PPT (=PSU))
+    elif hasCurrents:
+        fxy_all[5] = int('0100010000000000',2) #change replicator (index 5) to delayed rep of 4 descriptors, code 1/04/000
+        fxy_all.append(int('0001011000000100',2)) #0/22/004: current direction (9b, degrees True/towards)
+        fxy_all.append(int('0001011000011111',2)) #0/22/031: current speed (13b, 100*vel in m/s)
+        
 
     # Section 4 info (data)
     identifier = identifier[:9] #concatenates identifier if necessary
@@ -765,15 +292,17 @@ def writebufrfile(bufrfile, cdtg, lon, lat, identifier, originatingcenter, depth
     # hour/minute (3,01,012)
     bufrarray = bufrarray + format(cdtg.hour, '05b')  # hour (0,04,004)
     bufrarray = bufrarray + format(cdtg.minute, '06b')  # min (0,04,005)
-
+    
     # lat/lon (3,01,023)
     bufrarray = bufrarray + format(int(np.round((lat * 100)) + 9000), '015b')  # lat (0,05,002)
     bufrarray = bufrarray + format(int(np.round((lon * 100)) + 18000), '016b')  # lon (0,06,002)
+    
 
     # temperature-depth profile (3,06,001)
     bufrarray = bufrarray + '00'  # indicator for digitization (0,02,032): 'values at selected depths' = 0
-    bufrarray = bufrarray + format(len(temperature),'16b')  # delayed descripter replication factor(0,31,001) = length
+    bufrarray = bufrarray + format(len(temperature),'016b')  # delayed descripter replication factor(0,31,001) = length
     
+        
     #converting temperature, salinity (as req'd.), and depth and writing
     if hasSal:
         for t,d,s in zip(temperature,depth,salinity):
@@ -783,6 +312,22 @@ def writebufrfile(bufrfile, cdtg, lon, lat, identifier, originatingcenter, depth
             bufrarray = bufrarray + format(t_in,'015b')
             s_in = int(np.round(100 * s))  # salinity (0,22,062)
             bufrarray = bufrarray + format(s_in,'014b')
+        
+    elif hasCurrents:
+        for t,d,u,v in zip(temperature,depth,U,V):
+            d_in = int(np.round(d*10)) # depth (0,07,062)
+            bufrarray = bufrarray + format(d_in,'017b')
+            t_in = int(np.round(100 * (t + 273.15)))  # temperature (0,22,043)
+            bufrarray = bufrarray + format(t_in,'015b')
+            
+            #calculating direction and velocity
+            curvel = np.sqrt(u**2 + v**2)
+            curdir = 90 - (180/np.pi) * np.arctan2(v,u) #degrees true, north 0/clockwise
+            
+            curdir_in = int(np.round(curdir))  #0/22/004: current direction (9b, degrees True/towards)
+            bufrarray = bufrarray + format(curdir_in,'09b')
+            curvel_in = int(np.round(100 * curvel))  #0/22/031: current speed (13b, 100*vel in m/s)
+            bufrarray = bufrarray + format(curvel_in,'013b')
         
         
     else:
@@ -801,7 +346,7 @@ def writebufrfile(bufrfile, cdtg, lon, lat, identifier, originatingcenter, depth
     
     # total length of file in octets
     num_octets = 8 + sxn1len + sxn2len + sxn3len + sxn4len + 4  # sxn's 0 and 5 always have 8 and 4 octets, respectively
-
+        
     # writing the file
     with open(bufrfile, 'wb') as bufr:
 

@@ -33,6 +33,49 @@ from sys import getsizeof
 
 
 
+
+
+# #initializes dict with default settings for AXCTD processor
+# #any specified settings will be overwritten after this function is called in __init__
+# def init_AXCP_settings(self, settings):
+
+#     self.settings = {}
+#     self.settings["refreshrate"] = 1 #size of raw audio chunks to process, in seconds
+#     self.settings["revcoil"]     = False #coil on AXCP reversed- rotates currents by 180 degrees
+#     self.settings["quality"]     = 1    #profile processing quality- 1=high/slow, 2=moderate speed/quality, 3=low/fast
+#     self.settings["spindown_detect_rt"] = True #realtime detection of probe spindown to avoid processing unnecessary data
+    
+#     #1-use zero crossings and temperature baseline freq calculated with velocity
+#     #2-use FFT (window size set by settings['tempfftwindow']) once per refresh
+#     self.settings["temp_mode"] = 2 
+#     self.settings["tempfftwindow"] = 1.0 #FFT window for temperature in seconds (used if temp_mode > 1) 
+            
+#     for csetting in settings:
+#         self.settings[csetting] = settings[csetting] #overwrite defaults for user specified settings 
+      
+#     self.revcoil = bool(self.settings["revcoil"])
+#     self.spindown_detect_rt = bool(self.settings["spindown_detect_rt"])
+    
+#     self.quality = self.settings["quality"]
+#     if self.quality <= 0:
+#         self.quality = 1
+#     elif self.quality >= 4:
+#         self.quality = 3
+    
+#     self.temp_mode = self.settings["temp_mode"]
+#     if self.temp_mode < 1:
+#         self.temp_mode = 1
+#     elif self.temp_mode > 2:
+#         self.temp_mode = 2    
+
+    
+#     self.refreshrate = self.settings["refreshrate"]
+#     self.tempfftwindowsec = self.settings["tempfftwindow"]
+    
+#     if self.tempfftwindowsec > self.refreshrate: #temperature FFT window length must be less than refresh rate
+#     self.tempfftwindowsec = self.refreshrate
+
+
     
 # =============================================================================
 #  Audio Processor class
@@ -42,7 +85,7 @@ from sys import getsizeof
 class AXBT_Processor:
 
     #initializing current thread (saving variables, reading audio data or contacting/configuring receiver)
-    def __init__(self, audiofile, audiochannel=-1, timerange=[0,-1], fftwindow=0.3, minfftratio=0.5, minsiglev=65, triggerfftratio=0.88, triggersiglev=75, tcoeff=[-40.0,0.02778,0.0,0.0], zcoeff=[0.0,1.524,0.0,0.0], flims=[1300,2800]):
+    def __init__(self, audiofile, audiochannel=-1, timerange=[0,-1], settings={}):
         
         self.audiochannel = audiochannel
         
@@ -50,19 +93,6 @@ class AXBT_Processor:
         self.waittoterminate = False #whether to pause on termination of run loop for kill process to complete
         
         self.timerange = timerange
-        
-        
-        #FFT thresholds
-        self.fftwindow = fftwindow
-        self.minfftratio = minfftratio
-        self.minsiglev = minsiglev
-        self.triggerfftratio = triggerfftratio
-        self.triggersiglev = triggersiglev
-        
-        #conversion coefficients + parameters
-        self.tcoeff = tcoeff
-        self.zcoeff = zcoeff
-        self.flims = flims
         
         self.temperature = []
         self.depth = []
@@ -72,6 +102,31 @@ class AXBT_Processor:
         self.fp = []
         
         self.audiofile = audiofile
+        
+        self.init_settings(settings)
+        
+        
+        
+    def init_settings(self,settings):
+        
+        self.settings = {'fftwindow':0.3, 'minfftratio':0.5, 'minsiglev':65, 'triggerfftratio':0.88, 'triggersiglev':75, 'tcoeff':[-40.0,0.02778,0.0,0.0], 'zcoeff':[0.0,1.524,0.0,0.0], 'flims':[1300,2800]}
+        
+        #overwriting user-defined settings
+        for csetting in settings:
+            self.settings[csetting] = settings[csetting]
+        
+        #FFT thresholds
+        self.fftwindow = self.settings['fftwindow']
+        self.minfftratio = self.settings['minfftratio']
+        self.minsiglev = self.settings['minsiglev']
+        self.triggerfftratio = self.settings['triggerfftratio']
+        self.triggersiglev = self.settings['triggersiglev']
+        
+        #conversion coefficients + parameters
+        self.tcoeff = self.settings['tcoeff']
+        self.zcoeff = self.settings['zcoeff']
+        self.flims = self.settings['flims']
+        
         
         
         
@@ -90,9 +145,7 @@ class AXBT_Processor:
         self.good_f_ind = np.all((np.greater_equal(self.f, self.flims[0]), np.less_equal(self.f, self.flims[1])), axis=0)
         
         self.good_f = self.f[self.good_f_ind]
-        
-        self.dead_freq_ind = np.argmin(np.abs(self.f - self.deadfreq))
-        
+                
         
         
     

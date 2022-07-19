@@ -160,6 +160,7 @@ def initialize_AXCP_vars(self):
     self.nff = 0  # least squares fit number
     
     self.tspinup = -1
+    self.tspindown = -1
             
     #storing values of frequencies etc. for profile calculations
     self.pk = np.array([])
@@ -667,6 +668,7 @@ def refine_spindown_prof(self):
             if self.ROTFRMS[goodpoints[-1]] > avg + 2 * rms:
                 nffspindown = goodpoints[-1] - 1
                 
+    self.tspindown = self.TIME[nffspindown]
                 
     #truncating all profiles, converting to numpy arrays (already should be but just to be sure)
     self.TIME = np.asarray(self.TIME[:nffspindown])

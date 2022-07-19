@@ -17,7 +17,6 @@
 
 
 
-import os
 import numpy as np
 from scipy import signal
 from scipy.io import wavfile #for wav file reading
@@ -29,6 +28,10 @@ from traceback import print_exc as trace_error
 
 from . import geomag_axbps as gm
 
+#add package directory to path for other file imports
+import os, inspect
+global cdir_axcp
+cdir_axcp = os.path.dirname(os.path.abspath(inspect.getfile(inspect.currentframe())))
 
 
 
@@ -118,7 +121,7 @@ class AXCP_Processor:
         self.lon = lon
         self.dropdate = dropdate
         print(os.getcwd())
-        self.gm = gm.GeoMag(wmm_filename='AXCPprocessor/WMM.COF')
+        self.gm = gm.GeoMag(wmm_filename=os.path.join(cdir_axcp, 'WMM.COF'))
         self.update_position()
         
         #initializing AXCP processor specific vars, as well as filter and conversion coefficients and output profile arrays
