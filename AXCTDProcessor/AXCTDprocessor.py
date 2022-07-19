@@ -26,7 +26,7 @@ import datetime as dt
 
 from traceback import print_exc as trace_error
 
-import demodulate, parse
+from . import demodulate, parse
 
 
 #this could be problematic for debugging but I'm getting tired of the "chunk could not be understood" messages
