@@ -22,8 +22,8 @@ import numpy as np
 
 
 #which of the probe types to process
-do_axbt = False
-do_axctd = False
+do_axbt = True
+do_axctd = True
 do_axcp = True
 
 
