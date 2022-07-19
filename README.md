@@ -5,9 +5,7 @@ The AXCTD Processor can reprocess AXCTD audio (WAV) files via command line, outp
 
 
 ### Usage:
-Via command line: `python3 process_AXCTD -i inputfile.WAV`
-
-Or via python script as shown in the parent readme
+`python3 processAXCTD -i inputfile.WAV`
 
 ### Installation and Setup:
 This script requires python modules other than python base. Install them with `pip install -r requirements.txt`
@@ -17,68 +15,55 @@ This script requires python modules other than python base. Install them with `p
 <table>
   <tbody>
     <tr>
-      <th align="left">Purpose</th>
-      <th align="center">Variable</th>
+      <th align="center">Flag</th>
       <th align="left">Purpose</th>
     </tr>
     <tr>
       <td align="center">-o</td>
-      <td align="center">N/A</td>
-      <td>Output filename- full or relative path and filename for output AXCTD drop metadata and profile file (defaults to <code>output.txt</code>); cli command only</td>
+      <td>Output filename- full or relative path and filename for output AXCTD drop metadata and profile file (defaults to <code>output.txt</code>)</td>
     </tr>
     <tr>
       <td align="center">-s</td>
-      <td align="center">timerange[0]</td>
       <td>Start time of AXCTD profile in WAV file, format: SS, MM:SS, or HH:MM:SS (default: 0 sec)</td>
     </tr>
     <tr>
       <td align="center">-e</td>
-      <td align="center">timerange[1]</td>
       <td>End time of AXCTD profile in WAV file, format: SS, MM:SS, or HH:MM:SS (default: end of WAV file)</td>
     </tr>
     <tr>
       <td align="center">-a</td>
-      <td align="center">triggerrange[0]</td>
       <td>Minimum number of seconds after first 400 Hz pulse is detected that profile initiation can be triggered</td>
     </tr>
     <tr>
       <td align="center">-b</td>
-      <td align="center">triggerrange[-1]</td>
-      <td>Maximum number of seconds after first 400 Hz pulse is detected that profile initiation is triggered (if no 7500 Hz tone is detected, the profile will be triggered at this time). Set to -1 (default) if you do not desire a maximum trigger time.</td>
+      <td>Maximum number of seconds after first 400 Hz pulse is detected that profile initiation is triggered (if no 7500 Hz tone is detected, the profile will be triggered at this time)</td>
     </tr>
     <tr>
       <td align="center">-p</td>
-      <td align="center">minR400</td>
       <td>The threshold of the 400 Hz signal level normalized to the dead frequency (selectable) signal level to recognize a 400 Hz "header" pulse</td>
     </tr>
     <tr>
       <td align="center">-t</td>
-      <td align="center">mindR7500</td>
       <td>The threshold of the 7500 Hz signal level normalized to the dead frequency (selectable) signal level to recognize that profile transmission has begun</td>
     </tr>
     <tr>
       <td align="center">-d</td>
-      <td align="center">deadfreq</td>
       <td>The dead frequency- a quiet frequency used to normalize probe transmission signal levels to background static noise</td>
     </tr>
     <tr>
       <td align="center">-l</td>
-      <td align="center">pointsperloop</td>
       <td>The number of audio PCM datapoints processed per loop (minimum of 1-2 times the sampling frequency of the data is recommended)</td>
     </tr>
     <tr>
       <td align="center">-m</td>
-      <td align="center">mark_space_freqs[0]</td>
       <td>Mark frequency- the frequency assumed to represent bit 1, default 400 Hz</td>
     </tr>
     <tr>
       <td align="center">-n</td>
-      <td align="center">mark_space_freqs[1]</td>
       <td>Mark frequency- the frequency assumed to represent bit 1, default 800 Hz</td>
     </tr>
     <tr>
       <td align="center">-u</td>
-      <td align="center">use_bandpass</td>
       <td>Logical flag to apply bandpass filter (100 Hz to 1200 Hz) prior to demodulating PCM data. The default is a 1200 Hz lowpass filter</td>
     </tr>
   </tbody>
@@ -145,12 +130,4 @@ After each profile frame is parsed, temperature and conductivity are calculated 
 The AXCTD Processor is written in a seemingly unnecessarily complicated manner, with buffers for PCM data and the demodulated bitstream as the program processes a preset number of PCM points via each iteration (set via the pointsperloop flag <b>-l</b>, default 100000). Although a simpler version can be (and was) written that demodulates the entire profile first, and then parses the bitstream into valid header and profile data, the AXCTD Processor was developed in this manner to simplify translation into a realtime processor connected to a VHF radio receiver that provides immediate feedback to a user processing profiles in an aircraft.
 
 <br />
-
-
-## More Information
-
-AXCTD Processor uses the same algorithms implemented in the Airborne eXpendable Buoy Processing System (AXBPS) to process AXCTD profiles from raw audio files. For more information, see the [AXBPS homepage](http://mmmfire.whoi.edu/axbps).
-
-
 <br />
-

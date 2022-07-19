@@ -27,7 +27,7 @@ from datetime import date
 
 from traceback import print_exc as trace_error
 
-from . import geomag as gm
+from . import geomag_axbps as gm
 
 
 
