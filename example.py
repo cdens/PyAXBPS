@@ -49,7 +49,7 @@ if __name__ == "__main__":
     
     if do_axbt:
         print("Processing an AXBT file")
-        inputfile = 'sample_files/AXBT_sample.WAV'
+        inputfile = 'tests/AXBT_sample.WAV'
         
         #all of these values are defaults- you only need to specify them if you want something different
         timerange = [0,-1] #specify start and end times (in seconds) to process within the file, default 0 starts at the beginning and -1 means process to the end of the file
@@ -81,7 +81,7 @@ if __name__ == "__main__":
         
         
         #LOG DTA file- temperature only
-        io.writelogfile('sample_AXBT_output.DTA', example_dropdatetime, depth, temperature, frequency, time, 'AXBT')
+        io.writelogfile('tests/sample_AXBT_output.DTA', example_dropdatetime, depth, temperature, frequency, time, 'AXBT')
         
         
         #removing all NaNs
@@ -107,11 +107,20 @@ if __name__ == "__main__":
         
         
         #EDF file- variable format, custom fields and header with comments/drop metadata
-        io.writeedffile('sample_AXBT_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments)
+        #NOTE!!!!!!!!!!!!
+        #For some reason, when you run this function multiple times, the optional variable field_formats will use 
+        #the value to which it was evaluated from the writeedffile function's previous execution if you don't 
+        # explicitly specify it as something (e.g. the default, [] ). This isn't necessarily critical if you're 
+        # processing multiple of the exact same file format, but when processing EDF files with different column 
+        # headers, e.g. an AXBT, then AXCTD, then AXCP edf file as in this example, it's a problem and requires 
+        # you to specify the field_formats optional argument.
+        io.writeedffile('tests/sample_AXBT_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments, field_formats=[])
         
         #NVO file
-        io.writefinfile('sample_AXBT_output.nvo', example_dropdatetime, example_lat, example_lon, 99, depth, temperature)
+        io.writefinfile('tests/sample_AXBT_output.nvo', example_dropdatetime, example_lat, example_lon, 99, depth, temperature)
         
+        #BUFR file (WMO formatted)
+        io.writebufrfile('tests/sample_AXBT_output.bufr', example_dropdatetime, example_lon, example_lat, example_id, originatingcenter, depth, temperature)
         
         #plotting temperature vs. depth
         fig = plt.figure() 
@@ -123,7 +132,7 @@ if __name__ == "__main__":
         ax.set_title('AXBT Example', fontweight="bold")
         ax.grid()
         ax.invert_yaxis()
-        fig.savefig('AXBT_plot.png', format='png')
+        fig.savefig('tests/AXBT_plot.png', format='png')
         plt.close('fig')
     
     
@@ -142,7 +151,7 @@ if __name__ == "__main__":
     
     if do_axctd:
     
-        inputfile = 'sample_files/AXCTD_sample.WAV'
+        inputfile = 'tests/AXCTD_sample.WAV'
         
         #all of these values are defaults- you only need to specify them if you want something different
         timerange = [0,-1] #specify start and end times (in seconds) to process within the file, default 0 starts at the beginning and -1 means process to the end of the file
@@ -210,7 +219,15 @@ if __name__ == "__main__":
             """
             
         #EDF file- variable format, custom fields and header with comments/drop metadata
-        io.writeedffile('sample_AXCTD_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments)
+        #NOTE!!!!!!!!!!!!
+        #For some reason, when you run this function multiple times, the optional variable field_formats will use 
+        #the value to which it was evaluated from the writeedffile function's previous execution if you don't 
+        # explicitly specify it as something (e.g. the default, [] ). This isn't necessarily critical if you're 
+        # processing multiple of the exact same file format, but when processing EDF files with different column 
+        # headers, e.g. an AXBT, then AXCTD, then AXCP edf file as in this example, it's a problem and requires 
+        # you to specify the field_formats optional argument.
+        io.writeedffile('tests/sample_AXCTD_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments, field_formats=[])
+        
         
         
         #pulling profile data after processing is complete
@@ -246,7 +263,7 @@ if __name__ == "__main__":
         
         ax.set_title('AXCTD Example', fontweight="bold")
         ax.grid()
-        fig.savefig('AXCTD_plot.png', format='png')
+        fig.savefig('tests/AXCTD_plot.png', format='png')
         plt.close('fig')
     
     
@@ -262,7 +279,7 @@ if __name__ == "__main__":
     
     if do_axcp:
         
-        inputfile = 'sample_files/AXCP_sample.WAV'
+        inputfile = 'tests/AXCP_sample.WAV'
         
         # date/lat/lon are optional but necessary to calculate the horizontal and vertical components
         #   of Earth's magnetic field at the drop location, which go into the current speed calculations
@@ -301,7 +318,14 @@ if __name__ == "__main__":
         
         
         #EDF file- variable format, custom fields and header with comments/drop metadata
-        io.writeedffile('sample_AXCP_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments)
+        #NOTE!!!!!!!!!!!!
+        #For some reason, when you run this function multiple times, the optional variable field_formats will use 
+        #the value to which it was evaluated from the writeedffile function's previous execution if you don't 
+        # explicitly specify it as something (e.g. the default, [] ). This isn't necessarily critical if you're 
+        # processing multiple of the exact same file format, but when processing EDF files with different column 
+        # headers, e.g. an AXBT, then AXCTD, then AXCP edf file as in this example, it's a problem and requires 
+        # you to specify the field_formats optional argument.
+        io.writeedffile('tests/sample_AXCP_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments, field_formats=[])
         
         
         
@@ -328,7 +352,7 @@ if __name__ == "__main__":
         ax.set_title('AXCP Example', fontweight="bold")
         ax.grid()
         axC.legend()
-        fig.savefig('AXCP_plot.png', format='png')
+        fig.savefig('tests/AXCP_plot.png', format='png')
         plt.close('fig')
     
     

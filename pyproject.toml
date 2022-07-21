@@ -7,7 +7,7 @@ include-package-data = true
 
 [project]
 name = "PyAXBPS"
-version = "1.0.2"
+version = "1.0.3"
 authors = [
   { name="Casey Densmore", email="cdensmore101@gmail.com" },
 ]

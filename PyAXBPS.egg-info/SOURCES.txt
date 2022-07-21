@@ -17,3 +17,6 @@ PyAXBPS/AXCTDProcessor/AXCTDprocessor.py
 PyAXBPS/AXCTDProcessor/demodulate.py
 PyAXBPS/AXCTDProcessor/parse.py
 PyAXBPS/AXCTDProcessor/temp_LUT.txt
+PyAXBPS/cmd_line/process_AXBT.py
+PyAXBPS/cmd_line/process_AXCP.py
+PyAXBPS/cmd_line/process_AXCTD.py
