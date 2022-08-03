@@ -13,6 +13,7 @@
 
 from PyAXBPS import AXBTprocessor, AXCTDprocessor, AXCPprocessor
 from PyAXBPS import fileinteraction as io
+from PyAXBPS import autoqc as qc
 
 
 from datetime import date, datetime 
@@ -66,6 +67,8 @@ if __name__ == "__main__":
                     'flims':[1300,2800]} #frequency bounds for valid temperature observations
         
         #running the AXBT Processor
+        #for more info on AXBT data processing, see Densmore, Jayne, and Sanabia (2021)
+        #Development and Testing of the AXBT Realtime Editing System
         axbt = AXBTprocessor.AXBT_Processor(inputfile, timerange=timerange, audiochannel=audiochannel, settings=settings)
         axbt.run()
         
@@ -122,11 +125,21 @@ if __name__ == "__main__":
         #BUFR file (WMO formatted)
         io.writebufrfile('tests/sample_AXBT_output.bufr', example_dropdatetime, example_lon, example_lat, example_id, originatingcenter, depth, temperature)
         
+        #running profile quality control (QC) checks
+        #for more info on autoQC algorithm, see Densmore, Jayne, and Sanabia (2021)
+        #Development and Testing of the AXBT Realtime Editing System
+        check_for_gaps = True #whether or not to check for false starts due to VHF interference (identified as a 10+ meter gap in data within 50 m of the surface) **recommended for AXBT profiles only
+        smooth_window = 8 #window length (meters) to use for box smoothing of profile
+        output_resolution = 1 #depth resolution (meters) of output quality controlled profile
+        despike_threshold = 1.5 #if a point is more than output_threshold standard deviations outside of the mean of all datapoints within a +/- 15 meter window, it is considered a spike and discarded
+        temperature_qc,depth_qc = qc.autoqc(temperature, depth, smooth_window, output_resolution, despike_threshold, check_for_gaps)
+        
+        
         #plotting temperature vs. depth
         fig = plt.figure() 
         fig.clear()
         ax = fig.add_axes([0.1,0.1,0.85,0.85])
-        ax.plot(temperature, depth, 'r', linewidth=2)
+        ax.plot(temperature_qc, depth_qc, 'r', linewidth=2)
         ax.set_xlabel('Temperature (^oC)')
         ax.set_ylabel('Depth (m)')
         ax.set_title('AXBT Example', fontweight="bold")
@@ -235,11 +248,23 @@ if __name__ == "__main__":
         temperature = np.array(axctd.temperature)
         salinity = np.array(axctd.salinity)
         
-        #removing all NaNs
-        isgood = [False if np.isnan(ct*cz*cs) else True for ct,cz,cs in zip(temperature,depth,salinity)]
+        #removing all NaNs and points with unexpected salinity values (32-38 PSU in this example)
+        isgood = [False if (np.isnan(ct*cz*cs) or not (32 <= cs <= 38)) else True for ct,cz,cs in zip(temperature,depth,salinity)]
         depth = depth[isgood]
         temperature = temperature[isgood]
         salinity = salinity[isgood]
+        
+        #running profile quality control (QC) checks
+        #for more info on autoQC algorithm, see Densmore, Jayne, and Sanabia (2021)
+        #Development and Testing of the AXBT Realtime Editing System
+        check_for_gaps = False #whether or not to check for false starts due to VHF interference (identified as a 10+ meter gap in data within 50 m of the surface) **recommended for AXBT profiles only
+        smooth_window = 8 #window length (meters) to use for box smoothing of profile
+        output_resolution = 1 #depth resolution (meters) of output quality controlled profile
+        despike_threshold = 1.5 #if a point is more than output_threshold standard deviations outside of the mean of all datapoints within a +/- 15 meter window, it is considered a spike and discarded
+        
+        #note- different spikes, etc. may be identified so it is recommended to use separate depth variables for each profile and then re-interpolate to the same depth range if you want to use a common depth variable
+        temperature_qc,depth_qc_T = qc.autoqc(temperature, depth, smooth_window, output_resolution, despike_threshold, check_for_gaps)
+        salinity_qc,depth_qc_S = qc.autoqc(salinity, depth, smooth_window, output_resolution, despike_threshold, check_for_gaps)
         
         
         #plotting temperature and salinity vs. depth
@@ -258,8 +283,8 @@ if __name__ == "__main__":
         ax.invert_yaxis() #only need to invert one zxis since twiny causes the other to copy it
         
         
-        ax.plot(temperature, depth, 'r', linewidth=2)
-        axS.plot(salinity, depth, 'b', linewidth=2)
+        ax.plot(temperature_qc, depth_qc_T, 'r', linewidth=2)
+        axS.plot(salinity_qc, depth_qc_S, 'b', linewidth=2)
         
         ax.set_title('AXCTD Example', fontweight="bold")
         ax.grid()
@@ -328,6 +353,18 @@ if __name__ == "__main__":
         io.writeedffile('tests/sample_AXCP_output.edf', example_dropdatetime, example_lat, example_lon, edf_data, edf_comments, field_formats=[])
         
         
+        #running profile quality control (QC) checks
+        #for more info on autoQC algorithm, see Densmore, Jayne, and Sanabia (2021)
+        #Development and Testing of the AXBT Realtime Editing System
+        check_for_gaps = False #whether or not to check for false starts due to VHF interference (identified as a 10+ meter gap in data within 50 m of the surface) **recommended for AXBT profiles only
+        smooth_window = 8 #window length (meters) to use for box smoothing of profile
+        output_resolution = 1 #depth resolution (meters) of output quality controlled profile
+        despike_threshold = 1.5 #if a point is more than output_threshold standard deviations outside of the mean of all datapoints within a +/- 15 meter window, it is considered a spike and discarded
+        
+        #note- different spikes, etc. may be identified so it is recommended to use separate depth variables for each profile and then re-interpolate to the same depth range if you want to use a common depth variable
+        temperature_qc,depth_qc_T = qc.autoqc(axcp.TEMP, axcp.DEPTH, smooth_window, output_resolution, despike_threshold, check_for_gaps)
+        U_qc,depth_qc_U = qc.autoqc(axcp.U_TRUE, axcp.DEPTH, smooth_window, output_resolution, despike_threshold, check_for_gaps)
+        V_qc,depth_qc_V = qc.autoqc(axcp.V_TRUE, axcp.DEPTH, smooth_window, output_resolution, despike_threshold, check_for_gaps)
         
         #plotting temperature and currents vs. depth
         fig = plt.figure() 
@@ -345,9 +382,9 @@ if __name__ == "__main__":
         ax.invert_yaxis() #only need to invert one zxis since twiny causes the other to copy it
         
         
-        axC.plot(axcp.U_TRUE, axcp.DEPTH, 'b', linewidth=1, label='U')
-        axC.plot(axcp.V_TRUE, axcp.DEPTH, 'g', linewidth=1, label='V')
-        ax.plot(axcp.TEMP, axcp.DEPTH, 'r', linewidth=2, label='Temperature')
+        axC.plot(U_qc, depth_qc_U, 'b', linewidth=1, label='U')
+        axC.plot(V_qc, depth_qc_V, 'g', linewidth=1, label='V')
+        ax.plot(temperature_qc, depth_qc_T, 'r', linewidth=2, label='Temperature')
         
         ax.set_title('AXCP Example', fontweight="bold")
         ax.grid()

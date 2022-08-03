@@ -334,7 +334,7 @@ def writeedffile(edffile,dropdatetime,lat,lon,data,comments,field_formats=[],QC=
     
         #writing header, date and time, drop # (bad value)
         f_out.write("// This is an air-launched probe EXPORT DATA FILE  (EDF)\n")
-        f_out.write("// File generated with the AXBT Realtime Editing System (ARES)\n")
+        f_out.write("// File generated with the Airborne eXpendable Buoy Processing System (AXBPS)\n")
         f_out.write(f"Date of Launch:  {datetime.strftime(dropdatetime,'%m/%d/%y')}\n")
         f_out.write(f"Time of Launch:  {datetime.strftime(dropdatetime,'%H:%M:%S')}\n")
         

@@ -109,7 +109,15 @@ class AXBT_Processor:
         
     def init_settings(self,settings):
         
-        self.settings = {'fftwindow':0.3, 'minfftratio':0.5, 'minsiglev':65, 'triggerfftratio':0.88, 'triggersiglev':75, 'tcoeff':[-40.0,0.02778,0.0,0.0], 'zcoeff':[0.0,1.524,0.0,0.0], 'flims':[1300,2800]}
+        self.settings = {'fftwindow':0.3, 'minfftratio':0.5, 'minsiglev':65, 'triggerfftratio':0.88, 'triggersiglev':75,  'flims':[1300,2800]}
+        
+        # #standard navy equations
+        # self.settings['tcoeff'] = [-40.0,0.02778,0.0,0.0]
+        # self.settings['zcoeff'] = [0.0,1.524,0.0,0.0]
+        
+        #updated equations similar to Mk-21 output
+        self.settings['tcoeff'] = [-67.8339, 0.0713, -2.2001e-05, 3.6060e-09]
+        self.settings['zcoeff'] = [0, 1.5926, -0.00018, 0]
         
         #overwriting user-defined settings
         for csetting in settings:

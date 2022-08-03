@@ -112,6 +112,7 @@ class AXCTD_Processor:
         self.r400_prof = []
         self.r7500_prof = []
         self.hexframes = []
+        self.framedt = []
         self.depth = []
         self.temperature = []
         self.conductivity = []
@@ -327,6 +328,7 @@ class AXCTD_Processor:
                     self.conductivity.extend(data[6])
                     self.salinity.extend(data[7])
                     self.hexframes.extend(data[8])
+                    self.framedt.extend(data[9])
                 
                     
                 #increment demod buffer index forward
@@ -560,7 +562,7 @@ class AXCTD_Processor:
             binbufftimes = (np.asarray(self.binary_buffer_inds) - self.profstartind)/self.f_s
                 
             #parsing data into frames
-            hexframes, times, depths, temps, conds, psals, r400, r7500, next_buffer_ind = parse.parse_bitstream_to_profile(self.binary_buffer, binbufftimes, self.r400_buffer, self.r7500_buffer, self.tempLUT, self.tcoeff, self.ccoeff, self.zcoeff)
+            hexframes, framedt, times, depths, temps, conds, psals, r400, r7500, next_buffer_ind = parse.parse_bitstream_to_profile(self.binary_buffer, self.binary_buffer_conf, binbufftimes, self.r400_buffer, self.r7500_buffer, self.tempLUT, self.tcoeff, self.ccoeff, self.zcoeff)
                         
             #rounding data and appending to lists
             times = np.round(np.asarray(times) + self.firstpointtime, 2)
@@ -570,6 +572,7 @@ class AXCTD_Processor:
             psals = np.round(psals,2)
             r400 = np.round(r400,2)
             r7500 = np.round(r7500,2)
+            framedt = np.asarray(framedt)
             
             
             is_good = [True] * len(times)
@@ -586,6 +589,7 @@ class AXCTD_Processor:
             psals = psals[is_good]
             r400 = r400[is_good]
             r7500 = r7500[is_good]
+            framedt = framedt[is_good]
             
             
             
@@ -613,9 +617,10 @@ class AXCTD_Processor:
                 psals = psals[is_good]
                 r400 = r400[is_good]
                 r7500 = r7500[is_good]
+                framedt = framedt[is_good]
                 
                 if len(temps) > 0:
-                    data = [self.status, times, r400, r7500, depths, temps, conds, psals, hexframes] 
+                    data = [self.status, times, r400, r7500, depths, temps, conds, psals, hexframes, framedt] 
                     pass_empty = False
                     
                 

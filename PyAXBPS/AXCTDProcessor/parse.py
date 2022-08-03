@@ -38,9 +38,10 @@ import gsw
 ###################################################################################
 
 # hexframes,times,depths,temps,conds,psals,next_buffer_ind = parse.parse_bitstream_to_profile(self.binary_buffer, binbufftimes, self.r7500_buffer, self.masks)
-def parse_bitstream_to_profile(bitstream, times, r400_in, r7500_in, tempLUT, tcoeff, ccoeff, zcoeff):
+def parse_bitstream_to_profile(bitstream, conf, times, r400_in, r7500_in, tempLUT, tcoeff, ccoeff, zcoeff):
     
     hexframes = [] # hexadecimal representation of frame
+    framedt = []
     proftime = [] #time (post-profile start) corresponding to each ob
     z = [] #depth
     T = [] #temperature
@@ -75,9 +76,14 @@ def parse_bitstream_to_profile(bitstream, times, r400_in, r7500_in, tempLUT, tco
             Tint, Cint = convertFrameToInt(frame)
             cT, cC, cS, cz = convertIntsToFloats(Tint, Cint, ctime, tempLUT, tcoeff, ccoeff, zcoeff)
             
+            cdtime = times[s+32]-times[s] #total time of frame
+            # cdtime = np.nanstd(times[s:s+32]) #stdev of symbol time per frame
+            # cdtime = np.nanstd(r7500_in[s:s+32]) #mean power in frame
+            
             #storing frame/time/profile data
             hexframes.append(binListToHex(frame))
             proftime.append(ctime)
+            framedt.append(cdtime) #total time to get through current frame
             z.append(cz)
             T.append(cT)
             C.append(cC)
@@ -89,7 +95,7 @@ def parse_bitstream_to_profile(bitstream, times, r400_in, r7500_in, tempLUT, tco
             s += 32 #increase start bit by 32 to search for next frame
 
     # End parse bitstream
-    return hexframes, proftime, z, T, C, S, r400, r7500, s
+    return hexframes, framedt, proftime, z, T, C, S, r400, r7500, s
     
 
     

@@ -43,6 +43,11 @@ def init_AXCP_settings(self, settings):
     #2-use FFT (window size set by settings['tempfftwindow']) once per refresh
     self.settings["temp_mode"] = 2 
     self.settings["tempfftwindow"] = 1.0 #FFT window for temperature in seconds (used if temp_mode > 1) 
+    
+    #deviation threshold for FROTDEV- standard deviation of probe rotation frequency must drop below this value
+    #in parallel with FROT between 12-18 Hz for spinup to be detected
+    self.settings["spinupfrotmax"] = 0.5
+    self.settings["spindownfrotmax"] = 0.5
             
     for csetting in settings:
         self.settings[csetting] = settings[csetting] #overwrite defaults for user specified settings 
@@ -62,7 +67,9 @@ def init_AXCP_settings(self, settings):
     elif self.temp_mode > 2:
         self.temp_mode = 2    
 
-    
+    self.spinupfrotmax = self.settings["spinupfrotmax"]
+    self.spindownfrotmax = self.settings["spindownfrotmax"]
+        
     self.refreshrate = self.settings["refreshrate"]
     self.tempfftwindowsec = self.settings["tempfftwindow"]
     
@@ -527,7 +534,7 @@ def iterate_AXCP_process(self, e):
     #requirements: time >= 5 seconds, rotation frequency deviation below 0.5 (steady state), rotation frequency between 10 and 20 Hz
     #precise spinup time is defined as achieving 8 Hz, half rotation rate of average 16 Hz spin
     #added self.tspinup requirement so it won't re spin up profiles that have been spun down by the realtime detector
-    if not self.status and self.T[-1] >= 5 and self.FROTDEV[-1] <= 0.5 and 10 < self.FROTLP[-1] < 20 and self.tspinup < 0:
+    if not self.status and self.T[-1] >= 5 and self.FROTDEV[-1] <= self.spinupfrotmax and 10 < self.FROTLP[-1] < 20 and self.tspinup < 0:
         
         self.status = 1 #noting profile has spun up,  finding precise spinup time
         
@@ -546,11 +553,20 @@ def iterate_AXCP_process(self, e):
         spinup_ind = np.where(rotf_zc < 8)[0]
         if len(spinup_ind) > 0:
             try:
-                self.tspinup = tim_zc[spinup_ind[-1] + 2]
+                tspinup_rot = tim_zc[spinup_ind[-1] + 2]
             except IndexError:
-                self.tspinup = tim_zc[-1]
+                tspinup_rot = tim_zc[-1]
         else:
-            self.tspinup = tim_zc[0]
+            tspinup_rot = tim_zc[0]
+        
+        #also calculate spinup time as point just before FROTDEV starts to drop
+        devdrop = np.where(np.diff(self.FROTDEV) >= 0)[0]
+        if len(devdrop) > 0:
+            tspinup_devchange = self.T[devdrop[-1]]
+        else:
+            tspinup_devchange = tspinup_rot
+        
+        self.tspinup = np.min([tspinup_rot, tspinup_devchange])
         
         print(f"[+] Spinup detected: {self.tspinup:7.2f} seconds")
         
@@ -651,24 +667,52 @@ def iterate_AXCP_process(self, e):
 def refine_spindown_prof(self):
     
     #finding updated spindown profile index nffspindown
-    nffspindown = len(self.TIME) #default value wont truncate data
-    goodpoints = np.where([1 if crotf > 12 and crotf < 18 and crotfrms < 0.5 else 0 for (crotf,crotfrms) in zip(self.ROTF, self.ROTFRMS)])[0] #good data- rotation rate 12-18 Hz with RMS error < 0.5
-    nffspindown = goodpoints[-1] #new default value is last valid point meeting above criteria
+    nffspindown = len(self.TIME)-1 #default value wont truncate data
     
-    if len(goodpoints) > 0 and len(self.TIME) >= 20: #enough data to not cause buffer issues
-        inds_refine = [i for i in range(goodpoints[-1]-10, goodpoints[-1]-1) if np.isfinite(self.ROTFRMS[i])]
-        # inds_refine = inds_refine[np.where(np.isfinite(self.ROTFRMS[inds_refine]))[0]] #only indices with finite ROTFRMS values
+    
+    goodpoints = np.where([1 if crotf > 12 and crotf < 18 and crotfrms < self.spindownfrotmax else 0 for (crotf,crotfrms) in zip(self.ROTF, self.ROTFRMS)])[0] #good data- rotation rate 12-18 Hz with RMS error < 0.5
+    if len(goodpoints) > 0:
+        nffspindown = goodpoints[-1] #new default value is last valid point meeting above criteria
         
-        #need at least two values for this calculation to work
-        #delete final point if ROTFRMS exceeds 2*RMS of previous few points
-        if len(inds_refine) >= 2:
-            rms = np.min([0.05, np.nanmean(self.ROTFRMS[inds_refine]) ]) #cap rms at 0.05
-            avg = np.nanstd(self.ROTFRMS[inds_refine])
+        if len(self.TIME) >= 20: #enough data to not cause buffer issues
+            inds_refine = [i for i in range(goodpoints[-1]-10, goodpoints[-1]-1) if np.isfinite(self.ROTFRMS[i])]
+            # inds_refine = inds_refine[np.where(np.isfinite(self.ROTFRMS[inds_refine]))[0]] #only indices with finite ROTFRMS values
             
-            if self.ROTFRMS[goodpoints[-1]] > avg + 2 * rms:
-                nffspindown = goodpoints[-1] - 1
+            #need at least two values for this calculation to work
+            #delete final point if ROTFRMS exceeds 2*RMS of previous few points
+            if len(inds_refine) >= 2:
+                rms = np.min([0.05, np.nanmean(self.ROTFRMS[inds_refine]) ]) #cap rms at 0.05
+                avg = np.nanstd(self.ROTFRMS[inds_refine])
                 
-    self.tspindown = self.TIME[nffspindown]
+                if self.ROTFRMS[goodpoints[-1]] > avg + 2 * rms:
+                    nffspindown = goodpoints[-1] - 1
+    
+    self.tspindown = self.TIME[nffspindown] #spindown time based on profile times
+                    
+    
+    #reattempting spindown calculation based on all profile points- if it's after the profile indicated time, use it instead
+    nffspindown2 = 0
+    goodpoints = np.where([1 if crotf > 12 and crotf < 18 and crotfrms < self.spindownfrotmax else 0 for (crotf,crotfrms) in zip(self.FROTLP, self.FROTDEV)])[0] #good data- rotat      
+    if len(goodpoints) > 0:
+        nffspindown2 = goodpoints[-1] #new default value is last valid point meeting above criteria
+        
+        if len(self.T) >= 20: #enough data to not cause buffer issues
+            inds_refine = [i for i in range(goodpoints[-1]-10, goodpoints[-1]-1) if np.isfinite(self.FROTDEV[i])]
+            
+            #need at least two values for this calculation to work
+            #delete final point if ROTFRMS exceeds 2*RMS of previous few points
+            if len(inds_refine) >= 2:
+                rms = np.min([0.05, np.nanmean(self.FROTDEV[inds_refine]) ]) #cap rms at 0.05
+                avg = np.nanstd(self.FROTDEV[inds_refine])
+                
+                if self.FROTDEV[goodpoints[-1]] > avg + 2 * rms:
+                    nffspindown2 = goodpoints[-1] - 1
+                    
+    tspindown_all = self.T[nffspindown2]
+    if tspindown_all > self.tspindown: #only if updated spindown is after profile spindown time
+        nffspindown = np.argmin(np.abs(self.TIME - tspindown_all))
+        self.tspindown = tspindown_all
+                
                 
     #truncating all profiles, converting to numpy arrays (already should be but just to be sure)
     self.TIME = np.asarray(self.TIME[:nffspindown])

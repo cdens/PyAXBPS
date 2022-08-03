@@ -120,7 +120,6 @@ class AXCP_Processor:
         self.lat = lat
         self.lon = lon
         self.dropdate = dropdate
-        print(os.getcwd())
         self.gm = gm.GeoMag(wmm_filename=os.path.join(cdir_axcp, 'WMM.COF'))
         self.update_position()
         
