@@ -1,6 +1,6 @@
 Metadata-Version: 2.1
 Name: PyAXBPS
-Version: 1.0.3
+Version: 1.1.0
 Summary: A python package to process AXBT, AXCTD, and AXCP profiles via command line or python scripts
 Author-email: Casey Densmore <cdensmore101@gmail.com>
 License:                     GNU GENERAL PUBLIC LICENSE

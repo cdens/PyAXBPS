@@ -2,6 +2,7 @@ MANIFEST.in
 README.md
 pyproject.toml
 PyAXBPS/__init__.py
+PyAXBPS/autoqc.py
 PyAXBPS/fileinteraction.py
 PyAXBPS.egg-info/PKG-INFO
 PyAXBPS.egg-info/SOURCES.txt
